@@ -628,6 +628,11 @@ MP4Err MP4CreateAtom(u32 atomType, MP4AtomPtr *outAtom)
     err = MP4CreateBitRateAtom((MP4BitRateAtomPtr *)&newAtom);
     break;
 
+  case MP4HumanReadableStreamDescriptionAtomType:
+    err = MP4CreateHumanReadableStreamDescriptionAtom(
+      (MP4HumanReadableStreamDescriptionAtomPtr *)&newAtom);
+    break;
+
   case MP4ItemPropertiesAtomType:
     err = MP4CreateItemPropertiesAtom((MP4ItemPropertiesAtomPtr *)&newAtom);
     break;

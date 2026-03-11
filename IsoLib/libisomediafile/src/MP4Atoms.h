@@ -150,6 +150,7 @@ enum
   MP4H263SampleEntryAtomType                   = MP4_FOUR_CHAR_CODE('s', '2', '6', '3'),
   MP4H263SpecificInfoAtomType                  = MP4_FOUR_CHAR_CODE('d', '2', '6', '3'),
   MP4BitRateAtomType                           = MP4_FOUR_CHAR_CODE('b', 't', 'r', 't'),
+  MP4HumanReadableStreamDescriptionAtomType    = MP4_FOUR_CHAR_CODE('h', 'r', 's', 'd'),
   TGPPBitRateAtomType                          = MP4_FOUR_CHAR_CODE('b', 'i', 't', 'r'),
   MP4OriginalFormatAtomType                    = MP4_FOUR_CHAR_CODE('f', 'r', 'm', 'a'),
   MP4SchemeTypeAtomType                        = MP4_FOUR_CHAR_CODE('s', 'c', 'h', 'm'),
@@ -868,9 +869,8 @@ typedef struct MP4T35MetadataSampleEntry
 {
   MP4_BASE_ATOM
   COMMON_SAMPLE_ENTRY_FIELDS
-  char *description;       /* UTF-8 string, '\0' if empty */
-  u8 *t35_identifier;      /* Variable length byte array */
-  u32 t35_identifier_size; /* Size of t35_identifier in bytes */
+  u32 t35_identifier_length; /* Size of t35_identifier in bytes */
+  u8 *t35_identifier;        /* Variable-length byte array */
 } MP4T35MetadataSampleEntry, *MP4T35MetadataSampleEntryPtr;
 
 typedef struct MP4VisualSampleEntryAtom
@@ -1103,6 +1103,13 @@ typedef struct MP4BitRateAtom
   u32 max_bitrate; /* uint(32) */
 
 } MP4BitRateAtom, *MP4BitRateAtomPtr;
+
+typedef struct MP4HumanReadableStreamDescriptionAtom
+{
+  MP4_BASE_ATOM
+  char *description; /* UTF-8 string */
+
+} MP4HumanReadableStreamDescriptionAtom, *MP4HumanReadableStreamDescriptionAtomPtr;
 
 typedef struct MP4SampleDescriptionAtom
 {
@@ -2454,6 +2461,8 @@ MP4Err MP4CreateAMRSpecificInfoAtom(MP4AMRSpecificInfoAtomPtr *outAtom);
 MP4Err MP4CreateAMRWPSpecificInfoAtom(MP4AMRWPSpecificInfoAtomPtr *outAtom);
 MP4Err MP4CreateH263SpecificInfoAtom(MP4H263SpecificInfoAtomPtr *outAtom);
 MP4Err MP4CreateBitRateAtom(MP4BitRateAtomPtr *outAtom);
+MP4Err
+MP4CreateHumanReadableStreamDescriptionAtom(MP4HumanReadableStreamDescriptionAtomPtr *outAtom);
 
 MP4Err MP4CreateVisualMediaHeaderAtom(MP4VolumetricVisualMediaHeaderAtomPtr *outAtom);
 

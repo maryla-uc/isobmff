@@ -2179,6 +2179,14 @@ extern "C"
    * @ingroup SampleDescr
    */
   MP4_EXTERN(MP4Err) ISOGetSampleDescriptionType(MP4Handle sampleEntryH, u32 *type);
+  /**
+   * @brief This function returns the first human-readable description of a stream.
+   *
+   * @attention The caller is responsible for freeing *description with free().
+   * @ingroup SampleDescr
+   */
+  MP4_EXTERN(MP4Err)
+  ISOGetFirstHumanReadableStreamDescription(MP4Handle sampleEntryH, char **description);
 
   /**
    * @brief This starts a new movie fragment.

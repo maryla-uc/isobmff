@@ -83,19 +83,30 @@ static MP4Err findIt35MetadataTrack(MP4Movie moov, const std::string &t35PrefixS
 
     LOG_INFO("Found IT35 track with ID {}", trackID);
 
-    // Read t35_identifier and description from the serialized sample entry handle
-    u8 *identifier     = nullptr;
-    u32 identifierSize = 0;
-    char *description  = nullptr;
+    u8 *identifier       = nullptr;
+    u32 identifierLength = 0;
+    char *description    = NULL;
 
-    MP4Err readErr =
-      ISOGetT35SampleEntryFields(sampleEntryH, &identifier, &identifierSize, &description);
+    // Read t35_identifier from the serialized sample entry handle
+    MP4Err readErr = ISOGetT35SampleEntryFields(sampleEntryH, &identifier, &identifierLength);
+
+    // Read an optional description from a child
+    // HumanReadableStreamDescription in the sample entry
+    MP4Err hrsdErr = ISOGetFirstHumanReadableStreamDescription(sampleEntryH, &description);
+
     MP4DisposeHandle(sampleEntryH);
     sampleEntryH = nullptr;
 
-    if(readErr || identifier == nullptr || identifierSize == 0)
+    if(readErr || identifier == nullptr || identifierLength == 0)
     {
       LOG_WARN("Could not read t35_identifier from IT35 sample entry");
+      free(identifier);
+      free(description);
+      continue;
+    }
+    if(hrsdErr)
+    {
+      LOG_WARN("Could not read HumanReadableStreamDescription");
       free(identifier);
       free(description);
       continue;
@@ -103,8 +114,8 @@ static MP4Err findIt35MetadataTrack(MP4Movie moov, const std::string &t35PrefixS
 
     // Convert t35_identifier bytes to hex string
     std::string hexStr;
-    hexStr.reserve(identifierSize * 2);
-    for(u32 j = 0; j < identifierSize; j++)
+    hexStr.reserve(identifierLength * 2);
+    for(u32 j = 0; j < identifierLength; j++)
     {
       char buf[3];
       snprintf(buf, sizeof(buf), "%02X", identifier[j]);
@@ -121,7 +132,7 @@ static MP4Err findIt35MetadataTrack(MP4Movie moov, const std::string &t35PrefixS
     }
 
     LOG_DEBUG("Parsed 'it35' sample entry: identifier={} ({} bytes), description='{}'", hexStr,
-              identifierSize, (description && description[0] != '\0') ? description : "<empty>");
+              identifierLength, (description && description[0] != '\0') ? description : "<empty>");
     free(description);
 
     // Parse both prefixes to compare hex part only

@@ -294,22 +294,6 @@ static MP4Err fourCCToHandle(u32 fourCC, MP4Handle *outHandle)
   return MP4NoErr;
 }
 
-// Helper: Convert string to handle (as text, not hex)
-static MP4Err stringToHandle(const std::string &input, MP4Handle *outHandle)
-{
-  MP4Err err = MP4NoErr;
-  *outHandle = nullptr;
-
-  // Copy input string as text
-  u32 byteCount = static_cast<u32>(input.size());
-  err           = MP4NewHandle(byteCount, outHandle);
-  if(err) return err;
-
-  std::memcpy(**outHandle, input.data(), byteCount);
-
-  return MP4NoErr;
-}
-
 bool MebxMe4cStrategy::isApplicable(const MetadataMap &items, const InjectionConfig &config,
                                     std::string &reason) const
 {

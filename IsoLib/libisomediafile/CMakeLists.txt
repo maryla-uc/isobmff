@@ -71,6 +71,7 @@ add_library(
     src/H263SpecificInfoAtom.c
     src/HandlerAtom.c
     src/HEVCConfigAtom.c
+    src/HumanReadableStreamDescriptionAtom.c
     src/LHEVCConfigAtom.c
     src/VVCConfigAtom.c
     src/VVCNALUConfigAtom.c

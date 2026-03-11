@@ -18,14 +18,9 @@
 
 static void destroy(MP4AtomPtr s)
 {
+  MP4Err err                        = MP4NoErr;
   MP4T35MetadataSampleEntryPtr self = (MP4T35MetadataSampleEntryPtr)s;
   if(self == NULL) return;
-
-  if(self->description)
-  {
-    free(self->description);
-    self->description = NULL;
-  }
 
   if(self->t35_identifier)
   {
@@ -33,7 +28,11 @@ static void destroy(MP4AtomPtr s)
     self->t35_identifier = NULL;
   }
 
+  DESTROY_ATOM_LIST_F(ExtensionAtomList);
   if(self->super) self->super->destroy(s);
+bail:
+  TEST_RETURN(err);
+  return;
 }
 
 static MP4Err serialize(struct MP4Atom *s, char *buffer)
@@ -48,25 +47,20 @@ static MP4Err serialize(struct MP4Atom *s, char *buffer)
   PUTBYTES(self->reserved, 6);
   PUT16(dataReferenceIndex);
 
-  /* Write description as null-terminated UTF-8 string */
-  if(self->description != NULL)
+  if(self->t35_identifier_length < 1 || self->t35_identifier_length > 255 ||
+     self->t35_identifier == NULL)
   {
-    u32 descLen = (u32)strlen(self->description) + 1; /* Include null terminator */
-    PUTBYTES(self->description, descLen);
+    err = MP4BadParamErr;
+    goto bail;
   }
-  else
-  {
-    /* Empty description: just write '\0' */
-    u8 nullByte = 0;
-    PUT8_V(nullByte);
-  }
+
+  /* Write t35_identifier_length */
+  PUT8(t35_identifier_length);
 
   /* Write t35_identifier byte array */
-  if(self->t35_identifier != NULL && self->t35_identifier_size > 0)
-  {
-    PUTBYTES(self->t35_identifier, self->t35_identifier_size);
-  }
+  PUTBYTES(self->t35_identifier, self->t35_identifier_length);
 
+  SERIALIZE_ATOM_LIST(ExtensionAtomList);
   assert(self->bytesWritten == self->size);
 bail:
   TEST_RETURN(err);
@@ -83,22 +77,19 @@ static MP4Err calculateSize(struct MP4Atom *s)
 
   self->size += (6 + 2); /* reserved + dataReferenceIndex */
 
-  /* Add description size (null-terminated string) */
-  if(self->description != NULL)
+  if(self->t35_identifier_length < 1 || self->t35_identifier_length > 255 ||
+     self->t35_identifier == NULL)
   {
-    self->size += (u32)strlen(self->description) + 1;
-  }
-  else
-  {
-    self->size += 1; /* Just '\0' */
+    err = MP4BadParamErr;
+    goto bail;
   }
 
+  /* Add t35_identifier_length size */
+  self->size += 1;
   /* Add t35_identifier size */
-  if(self->t35_identifier != NULL)
-  {
-    self->size += self->t35_identifier_size;
-  }
+  self->size += self->t35_identifier_length;
 
+  ADD_ATOM_LIST_SIZE(ExtensionAtomList);
 bail:
   TEST_RETURN(err);
   return err;
@@ -108,10 +99,8 @@ static MP4Err createFromInputStream(MP4AtomPtr s, MP4AtomPtr proto, MP4InputStre
 {
   MP4Err err;
   MP4T35MetadataSampleEntryPtr self = (MP4T35MetadataSampleEntryPtr)s;
-  s64 bytesToRead;
-  u8 *buf = NULL;
-  u32 i;
 
+  err = MP4NoErr;
   if(self == NULL) BAILWITHERROR(MP4BadParamErr)
   err = self->super->createFromInputStream(s, proto, (char *)inputStream);
   if(err) goto bail;
@@ -119,64 +108,25 @@ static MP4Err createFromInputStream(MP4AtomPtr s, MP4AtomPtr proto, MP4InputStre
   GETBYTES(6, reserved);
   GET16(dataReferenceIndex);
 
-  /* Read all remaining bytes into a flat buffer, then split on the first null byte.
-   * Scanning byte-by-byte and "rewinding" by adjusting only bytesRead (while leaving
-   * the stream cursor in place) does not work — readData always reads from the current
-   * stream position. */
-  bytesToRead = (s64)(self->size - self->bytesRead);
-  if(bytesToRead < 0) BAILWITHERROR(MP4BadDataErr);
+  /* Read t35_identifier_length */
+  err = inputStream->read8(inputStream, &self->t35_identifier_length, NULL);
+  if(err) goto bail;
+  ++self->bytesRead;
+  if(self->t35_identifier_length == 0) BAILWITHERROR(MP4BadDataErr);
+  if(self->t35_identifier_length > self->size - self->bytesRead) BAILWITHERROR(MP4BadDataErr);
 
-  if(bytesToRead > 0)
-  {
-    buf = (u8 *)calloc((u32)bytesToRead, 1);
-    TESTMALLOC(buf);
-    err = inputStream->readData(inputStream, (u32)bytesToRead, (char *)buf, NULL);
-    if(err) goto bail;
-    self->bytesRead += (u32)bytesToRead;
+  /* Read t35_identifier */
+  self->t35_identifier = (u8 *)calloc(self->t35_identifier_length, 1);
+  TESTMALLOC(self->t35_identifier);
+  err = inputStream->readData(inputStream, self->t35_identifier_length,
+                              (char *)self->t35_identifier, NULL);
+  if(err) goto bail;
+  self->bytesRead += self->t35_identifier_length;
 
-    /* Find the null terminator that ends the description field */
-    u32 nullPos = (u32)bytesToRead; /* default: no null found */
-    for(i = 0; i < (u32)bytesToRead; i++)
-    {
-      if(buf[i] == 0)
-      {
-        nullPos = i;
-        break;
-      }
-    }
-
-    /* Description: bytes [0 .. nullPos] (including the null terminator) */
-    u32 descLen       = nullPos + 1; /* length including null */
-    self->description = (char *)calloc(descLen, 1);
-    TESTMALLOC(self->description);
-    memcpy(self->description, buf, descLen);
-
-    /* t35_identifier: bytes after the null terminator */
-    /* TODO: the length of t35_identifier is currently inferred as "all bytes remaining in the
-     * box after the description null terminator", which prevents any optional boxes (e.g.
-     * BitRateBox) from following it and makes the format non-extensible.
-     * This must be resolved at the next MPEG meeting, either by:
-     *   (a) preceding t35_identifier with an explicit length field (e.g. unsigned int(8)), or
-     *   (b) wrapping description and t35_identifier in their own child boxes (e.g. 'hrsd' for
-     *       the human-readable description as already proposed in the amendment text).
-     * Until then, optional boxes MUST NOT be appended after t35_identifier. */
-    u32 identStart = descLen;
-    if(identStart < (u32)bytesToRead)
-    {
-      self->t35_identifier_size = (u32)bytesToRead - identStart;
-      self->t35_identifier      = (u8 *)calloc(self->t35_identifier_size, 1);
-      TESTMALLOC(self->t35_identifier);
-      memcpy(self->t35_identifier, buf + identStart, self->t35_identifier_size);
-    }
-
-    free(buf);
-    buf = NULL;
-  }
-
+  GETATOM_LIST(ExtensionAtomList);
   if(self->bytesRead != self->size) BAILWITHERROR(MP4BadDataErr)
 
 bail:
-  free(buf);
   TEST_RETURN(err);
   return err;
 }
@@ -202,9 +152,12 @@ MP4Err MP4CreateT35MetadataSampleEntry(MP4T35MetadataSampleEntryPtr *outAtom)
   self->dataReferenceIndex = 1;
   memset(self->reserved, 0, 6);
 
-  self->description         = NULL;
-  self->t35_identifier      = NULL;
-  self->t35_identifier_size = 0;
+  self->t35_identifier_length = 0;
+  self->t35_identifier        = NULL;
+
+  // Typically for MP4HumanReadableStreamDescriptionAtom.
+  err = MP4MakeLinkedList(&self->ExtensionAtomList);
+  if(err) goto bail;
 
   *outAtom = self;
 bail:

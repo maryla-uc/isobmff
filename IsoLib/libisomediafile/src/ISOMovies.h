@@ -877,20 +877,16 @@ extern "C"
    * @ingroup SampleDescr
    *
    * Properly deserializes the handle returned by MP4GetMediaSampleDescription() and extracts
-   * the T.35 identifier bytes and optional description string. The caller is responsible for
-   * freeing *outIdentifier and *outDescription with free().
+   * the T.35 identifier bytes. The caller is responsible for freeing *outIdentifier with free().
    *
    * @param sampleEntryH  Handle containing the serialized 'it35' sample entry.
    * @param outIdentifier Output; receives a newly allocated copy of the t35_identifier bytes.
-   * @param outIdentifierSize Output; receives the number of bytes in *outIdentifier.
-   * @param outDescription Optional output; receives a newly allocated description string, or NULL
-   *                       if no description is present. Pass NULL to ignore.
+   * @param outIdentifierLength Output; receives the number of bytes in *outIdentifier.
    * @return MP4NoErr on success, MP4NotFoundErr if no identifier is present, MP4BadParamErr on
    *         invalid input.
    */
   ISO_EXTERN(ISOErr)
-  ISOGetT35SampleEntryFields(MP4Handle sampleEntryH, u8 **outIdentifier, u32 *outIdentifierSize,
-                             char **outDescription);
+  ISOGetT35SampleEntryFields(MP4Handle sampleEntryH, u8 **outIdentifier, u32 *outIdentifierLength);
 
   /*************************************************************************************************
    * VVC Sample descriptions
