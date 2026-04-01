@@ -2,6 +2,7 @@
 #include "MebxMe4cStrategy.hpp"
 #include "DedicatedIt35Strategy.hpp"
 #include "SampleGroupStrategy.hpp"
+#include "BitstreamStrategy.hpp"
 #include "../common/Logger.hpp"
 
 namespace t35
@@ -22,6 +23,10 @@ std::unique_ptr<InjectionStrategy> createInjectionStrategy(const std::string &st
   else if(strategyName == "sample-group")
   {
     return std::make_unique<SampleGroupStrategy>();
+  }
+  else if(strategyName == "bitstream")
+  {
+    return std::make_unique<BitstreamStrategy>();
   }
   else if(strategyName == "sei")
   {

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file MP4Movies.h
  * @brief API
  * @version 0.1
@@ -1075,6 +1075,19 @@ extern "C"
   MP4AddMediaSamples(MP4Media media, MP4Handle sampleH, u32 sampleCount, MP4Handle durationsH,
                      MP4Handle sizesH, MP4Handle sampleEntryH, MP4Handle decodingOffsetsH,
                      MP4Handle syncSamplesH);
+
+  /**
+   * @brief Update a sample in the media.
+   *
+   * @param media input media object
+   * @param sampleNumber 1-based index of the sample to update
+   * @param sampleH handle containing the new data
+   * @param sampleSize new size of the sample
+   * @return MP4Err error code
+   */
+  MP4_EXTERN(MP4Err)
+  MP4UpdateMediaSample(MP4Movie theMovie, MP4Media media, u32 sampleNumber, MP4Handle sampleH,
+                       u32 sampleSize);
   /**
    * @brief Add media samples by reference with padding bits
    *

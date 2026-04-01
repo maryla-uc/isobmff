@@ -74,6 +74,8 @@ INJECTION_MODES=(
     "mebx-me4c"
     "dedicated-it35"
     "sample-group"
+    # Won't work with the test video 01_simple.mp4 because it's neither HEVC nor AV1
+    # "bitstream"
 )
 
 # Results tracking (simple arrays instead of associative array)

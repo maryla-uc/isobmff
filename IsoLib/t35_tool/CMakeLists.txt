@@ -74,6 +74,7 @@ add_executable(
   injection/MebxMe4cStrategy.cpp
   injection/DedicatedIt35Strategy.cpp
   injection/SampleGroupStrategy.cpp
+  injection/BitstreamStrategy.cpp
   extraction/ExtractionStrategy.cpp
   extraction/MebxMe4cExtractor.cpp
   extraction/DedicatedIt35Extractor.cpp

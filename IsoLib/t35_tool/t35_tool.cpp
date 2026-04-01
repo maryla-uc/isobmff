@@ -52,6 +52,7 @@ void printAvailableOptions()
   std::cout << "  mebx-me4c                - MEBX track with me4c namespace (default)\n";
   std::cout << "  dedicated-it35           - Dedicated metadata track\n";
   std::cout << "  sample-group             - Sample group\n";
+  std::cout << "  bitstream                - Inject into video bitstream (AV1/HEVC)\n";
   std::cout << "\n";
   std::cout << "Available extraction methods:\n";
   std::cout << "  auto                     - Auto-detect (default)\n";
